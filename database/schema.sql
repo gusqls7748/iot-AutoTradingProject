@@ -1,4 +1,4 @@
--- 1. 마켓 데이터 (현재가 저장용)
+-- 1. 마켓 데이터 (시세저장: 현재가 저장용)
 CREATE TABLE IF NOT EXISTS market_data(
     id INT AUTO_INCREMENT PRIMARY KEY,
     ticker VARCHAR(20) NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS market_data(
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. 매매 기록 (언제, 얼마에 샀는지)
+-- 2. 매매 기록 (거래내역: 언제, 얼마에 샀는지)
 CREATE TABLE IF NOT EXISTS trade_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,  --AUTO_INCREMENT 자동으로 값 증가
     ticker VARCHAR(20) NOT NULL,
