@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="TradingEngine/TradingEngine.vcxproj" />
+  <Project Path="TradingEngine/TradingEngine.vcxproj" Id="3357931a-33e1-4773-a45a-607f277e95b5" />
 </Solution>

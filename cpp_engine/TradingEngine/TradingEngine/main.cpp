@@ -1,139 +1,123 @@
-//#include <iostream>
-//#include <mysql.h>
-//#include <string>
-//#include <windows.h> // Sleep 함수 사용
-//
-//using namespace std;
-//
-//// DB 접속 정보
-//const char* host = "127.0.0.1";
-//const char* user = "root";
-//const char* pw = "my123456";
-//const char* db = "AutoTrading";
-//
-//void runTradingLogic() {
-//	MYSQL* conn = mysql_init(NULL);
-//	if (!mysql_real_connect(conn, host, user, pw, db, 3306, NULL, 0)) {
-//		cout << " 연결실패 " << endl;
-//		return;
-//	}
-//
-//	// 최근 가격 2개를 가져와서 비교 (현재가 vs 5초전 가격)
-//	string query = "SELECT price FROM maket_data ORDER BY id DESC LIMIT 2";
-//
-//	if (mysql_query(conn, query.c_str()) == 0) {
-//		MYSQL_RES* res = mysql_store_result(conn);
-//		MYSQL_ROW row;
-//
-//		double prices[2] = { 0, 0 };
-//		int i = 0;
-//		while ((row = mysql_fetch_row(res)) && i < 2) {
-//			prices[i++] = atof(row[0]);
-//		}
-//		mysql_free_result(res);
-//
-//		if (i == 2) {
-//			double currentPrice = prices[0];	// 방금 들어온 가격
-//			double prevPrice = prices[1];		// 5초전 가격
-//
-//			cout << "현재" << currentPrice << " | 이전: " << prevPrice;
-//
-//			if (currentPrice > prevPrice) {
-//				cout << " -> 상승세!! (매수 검토)" << endl;
-//				// 여기에 trade_logs INSERT 문을 놓으면 자동 매매가 실행됩니다.
-//			}
-//			else if (currentPrice < prevPrice) {
-//				cout << " -> 하락세... (관망)" << endl;
-//			}
-//			else {
-//				cout << " -> 횡보 중 " << endl;
-//			}
-//		}
-//
-//	}
-//	mysql_close(conn);
-//
-//}
-//
-//int main() {
-//	cout << "C++ 자동 매매 엔진이 가동되었습니다. (중지: Ctrl+c) " << endl;
-//
-//	while (true) {
-//		runTradingLogic();
-//		Sleep(5000); // 5초 대기 (파이썬 수집 주기와 맞춤
-//	}
-//	return 0;
-//}
-//
-//-------------------------------------------------------------------------------------
-
 #include <iostream>
 #include <mysql.h>
 #include <string>
 #include <vector>
 #include <windows.h>
+#include <sstream> 
+#include <iomanip>
 
 using namespace std;
 
+// [1] 전역 변수 설정
 const char* host = "127.0.0.1";
 const char* user = "root";
 const char* pw = "my123456";
 const char* db = "AutoTrading";
 
-void checkMarketAndDecide() {
+// --- 여기서부터 함수 정의 (컴퓨터에게 도구 설명하기) ---
+
+// [2] 매매 기록 함수 (가장 기초)
+void recordTrade(double price, string side) {
     MYSQL* conn = mysql_init(NULL);
-
-    // 1. 연결 시도 로그
-    if (!mysql_real_connect(conn, host, user, pw, db, 3306, NULL, 0)) {
-        cout << "❌ DB 연결 실패: " << mysql_error(conn) << endl;
-        mysql_close(conn);
-        return;
-    }
-
-    // 2. 쿼리 실행 로그
-    string query = "SELECT price FROM market_data ORDER BY id DESC LIMIT 2";
-    if (mysql_query(conn, query.c_str()) != 0) {
-        cout << "❌ 쿼리 에러: " << mysql_error(conn) << endl;
-        mysql_close(conn);
-        return;
-    }
-
-    MYSQL_RES* res = mysql_store_result(conn);
-    if (!res) {
-        cout << "❌ 결과 세트 없음" << endl;
-        mysql_close(conn);
-        return;
-    }
-
-    MYSQL_ROW row;
-    vector<double> priceHistory;
-    while ((row = mysql_fetch_row(res))) {
-        priceHistory.push_back(atof(row[0]));
-    }
-    mysql_free_result(res);
-    mysql_close(conn); // 연결을 여기서 확실히 닫아줍니다.
-
-    // 3. 데이터 분석 로그
-    if (priceHistory.size() >= 2) {
-        double currentPrice = priceHistory[0];
-        double prevPrice = priceHistory[1];
-
-        cout << "📊 [분석 중] 현재: " << (long long)currentPrice << " | 이전: " << (long long)prevPrice;
-
-        if (currentPrice > prevPrice) cout << " -> 🚀 상승!" << endl;
-        else if (currentPrice < prevPrice) cout << " -> 📉 하락" << endl;
-        else cout << " -> ➡️ 변동없음" << endl;
-    }
-    else {
-        cout << "⏳ 데이터 수집 중... (현재 DB에 데이터 " << priceHistory.size() << "개 있음)" << endl;
-    }
+    if (!mysql_real_connect(conn, host, user, pw, db, 3306, NULL, 0)) return;
+    stringstream ss;
+    ss << fixed << setprecision(0);
+    ss << "INSERT INTO trade_logs (ticker, side, price, volume) VALUES ('KRW-BTC', '" << side << "', " << price << ", 0.001)";
+    mysql_query(conn, ss.str().c_str());
+    cout << "\n✅ [DB 기록] " << side << " 완료" << endl;
+    mysql_close(conn);
 }
 
-int main() {
-    cout << "========================================" << endl;
-    cout << "🛡️ C++ 자동 매매 엔진 작동 시작 (5초 주기)" << endl;
-    cout << "========================================" << endl;
+// [3] 자산 업데이트 함수 (기초)
+void updateAssets(double price, double volume) {
+    MYSQL* conn = mysql_init(NULL);
+    if (!mysql_real_connect(conn, host, user, pw, db, 3306, NULL, 0)) return;
+    mysql_autocommit(conn, true);
+    double totalPrice = price * volume;
 
+    stringstream ss1, ss2;
+    ss1 << fixed << setprecision(0) << "UPDATE assets SET balance = balance - " << totalPrice << " WHERE asset_type = 'CASH'";
+    ss2 << fixed << setprecision(8) << "INSERT INTO assets (asset_type, balance) VALUES ('BTC', " << volume << ") "
+        << "ON DUPLICATE KEY UPDATE balance = balance + " << volume;
+
+    mysql_query(conn, ss1.str().c_str());
+    mysql_query(conn, ss2.str().c_str());
+    mysql_query(conn, "COMMIT");
+    cout << "💰 [자산 반영 완료]" << endl;
+    mysql_close(conn);
+}
+
+// [4] 수익률 체크 및 매도 판단 함수
+void checkSaleCondition(double currentPrice) {
+    MYSQL* conn = mysql_init(NULL);
+    if (!mysql_real_connect(conn, host, user, pw, db, 3306, NULL, 0)) return;
+    string query = "SELECT AVG(price) FROM trade_logs WHERE side = 'BUY'";
+    double avgPrice = 0;
+    if (mysql_query(conn, query.c_str()) == 0) {
+        MYSQL_RES* res = mysql_store_result(conn);
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (row && row[0]) avgPrice = atof(row[0]);
+        mysql_free_result(res);
+    }
+    if (avgPrice > 0) {
+        double roi = ((currentPrice - avgPrice) / avgPrice) * 100;
+        cout << fixed << setprecision(2) << " | 평단: " << (long long)avgPrice << " | 수익률: " << roi << "%";
+
+        if (roi >= 2.0) {
+            cout << "\n✨ [익절 실행!]";
+            recordTrade(currentPrice, "SELL");
+            updateAssets(currentPrice, -0.001);
+        }
+        else if (roi <= -1.0) {
+            cout << "\n📉 [손절 실행!]";
+            recordTrade(currentPrice, "SELL");
+            updateAssets(currentPrice, -0.001);
+        }
+    }
+    mysql_close(conn);
+}
+
+// [5] 메인 전략 함수 (위의 함수들을 다 모아서 사용)
+void checkMarketAndDecide() {
+    MYSQL* conn = mysql_init(NULL);
+    if (!mysql_real_connect(conn, host, user, pw, db, 3306, NULL, 0)) return;
+
+    string maQuery = "SELECT AVG(price) FROM(SELECT price FROM market_data ORDER BY id DESC LIMIT 5) AS temp";
+    string curQuery = "SELECT price FROM market_data ORDER BY id DESC LIMIT 1";
+    double ma5 = 0, current = 0;
+
+    if (mysql_query(conn, maQuery.c_str()) == 0) {
+        MYSQL_RES* res = mysql_store_result(conn);
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (row && row[0]) ma5 = atof(row[0]);
+        mysql_free_result(res);
+    }
+    if (mysql_query(conn, curQuery.c_str()) == 0) {
+        MYSQL_RES* res = mysql_store_result(conn);
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (row && row[0]) current = atof(row[0]);
+        mysql_free_result(res);
+    }
+
+    if (ma5 > 0 && current > 0) {
+        cout << "📊 현재: " << (long long)current << " | MA5: " << (long long)ma5;
+        if (current > ma5) {
+            cout << " -> 🚀 매수 신호!";
+            recordTrade(current, "BUY");
+            updateAssets(current, 0.001);
+        }
+        else {
+            cout << " -> 💤 관망";
+        }
+        checkSaleCondition(current);
+        cout << endl;
+    }
+    mysql_close(conn);
+}
+
+// [6] 프로그램 시작점
+int main() {
+    cout << "🛡️ Trading Engine 가동 (MA5 전략)" << endl;
     while (true) {
         checkMarketAndDecide();
         Sleep(5000);
