@@ -218,8 +218,10 @@ pip install pymysql python-dotenv
 실시간 감시: 엔진이 잘 돌아가는지 매번 DB를 뒤져보지 않아도 됨.
 
 ````
+![alt text](<그래프 재현.png>)
 
-  
+
+  ![alt text](<1분 .png>)
 
 
 1️⃣ 전략 고도화 (Intelligence)
