@@ -3,6 +3,34 @@
 
 ### 알고리즘 기반 '주식/가상화폐 자동 매매 시뮬레이션
 
+1. 시스템 구조 (Architecture)
+  - Language: C++ (Main Engine), Python (Data Collector)
+  - Database: MySQL 
+  - Library: libmysql, WinSock2 (Network), Windows.h (System)
+  -Pattern: OOP (Object-Oriented Programming) 기반 모듈화
+
+2. 주요 기능 (Key Features)
+실시간 데이터 연동: Python으로 수집된 업비트 시세를 MySQL을 통해 실시간으로 읽어옴.
+
+- 이동평균선(MA5) 전략: 최근 5회차 가격 평균을 계산하여 현재가와 비교하는 추세 추종 매매.
+
+- 자동 자산 관리: 매수/매도 시 assets 테이블의 원화(CASH)와 비트코인(BTC) 잔고를 실시간 업데이트.
+
+- 매매 일지 자동 기록: 모든 거래 내역(가격, 시간, 종류)을 trade_logs 테이블에 자동 저장.
+
+- 리스크 관리 로직:
+  - 익절(Take-Profit): 설정 수익률(예: +0.01%) 도달 시 자동 매도.
+
+  - 손절(Stop-Loss): 설정 수익률(예: -0.01%) 도달 시 자동 매도.
+
+  - 중복 매수 방지: 코인 보유 중일 경우 추가 매수 금지 로직 포함.
+
+3. 모듈화 현황 (Refactoring)
+- DatabaseManager 클래스 구현:
+
+  - 기존 main.cpp에 밀집되어 있던 SQL 쿼리와 DB 접속 로직을 분리.
+  - DatabaseManager.h / .cpp 파일을 통해 DB 접근을 객체화하여 유지보수성 향상.
+- Main Logic 간소화: main.cpp는 매매 전략과 루프 제어에만 집중하도록 설계.
 2. 시스템 아키텍처 (전체 구조)
 시스템은 크게 세 부분으로 나누어 설계하면 효율적입니다.
 
@@ -105,23 +133,114 @@ pip install pymysql python-dotenv
 3. **트랜잭션 영속성 확보**:
    - 문제: 프로그램 종료 시 데이터 휘발 현상 발생.
    - 해결: `mysql_autocommit` 활성화 및 명시적 `COMMIT` 명령을 통해 데이터 영속성(Persistence) 확보.
----
 
-## 🗺️ 향후 개발 로드맵 (Roadmap)
+## 4일차
 
-### 1️⃣ 전략 고도화 (Intelligence)
-- [ ] **기술적 지표 도입**: 단순 가격 비교를 넘어 **이동평균선(MA5, MA20)**을 계산하여 추세 추종 매매 구현.
-- [ ] **자동 손절/익절(Stop-Loss/Take-Profit)**: 설정한 수익률(예: -3% 손절, +5% 익절) 도달 시 자동 매도 로직 추가.
-- [ ] **변동성 돌파 전략 이식**: 래리 윌리엄스의 변동성 돌파 로직을 활용한 진입 타점 정교화.
+### 오늘의 최종 성과 요약
+  - C++: 함수 분리(Refactoring)로 코드의 안정성 확보
+  - JSON: 공용 설정 파일로 시스템 관리 편의성 증대
+  - Python: 실시간 자산 모니터링 시각화 성공
 
-### 2️⃣ 시스템 안정성 및 최적화 (Stability)
-- [ ] **예외 처리(Error Handling)**: API 응답 지연 및 DB 연결 유실 시 자동 재접속을 위한 `try-catch` 및 재시도 로직 강화.
-- [ ] **멀티 스레딩(Multi-Threading)**: 데이터 수집(Python)과 분석/매매(C++)의 병목 현상을 제거하기 위한 스레드 분리 작업.
+- 잔고 확인 로직 (Balance Check)
+  - 기능: 매수 주문 실행 전, DB의 assets 테이블을 조회하여 실제 매수 가능한 CASH 잔액이 있는지 검증합니다.
+  - 효과: 잔액 부족으로 인한 SQL 오류를 방지하고, 무분별한 매수 시도를 차단합니다.
 
-### 3️⃣ 시각화 및 관리 (Visualization & Config)
-- [ ] **실시간 대시보드**: Python `matplotlib` 또는 `plotly`를 활용하여 자산 변화 추이 그래프 시각화.
-- [ ] **환경 설정 파일화**: DB 접속 정보 및 매매 설정값(매수 단위 등)을 `config.json` 또는 `.env`로 외부화하여 보안 및 편의성 증대.
+- 중복 매수 방지 (Anti-Double-Buy)
+  - 기능: 현재 BTC를 보유 중인지 체크하여, 이미 코인이 있다면 추가 매수 신호가 와도 진입을 제한합니다
+  - 효과: 한 번의 상승장에 자산이 몰빵되는 것을 방지하고, 정해진 비중(0.001 BTC 등)으로만 매매하도록 관리합니다.
 
+- 자동 청산 및 자산 반영 (Auto-Exit & Sync)
+  - 기능: 매수 후 실시간 수익률(ROI)을 계산하여 익절(+2.0%) 또는 손절(-1.0%) 기준 도달 시 자동으로 매도(SELL)를 실행합니다.
+  - 효과: 매매 즉시 assets 테이블의 현금과 코인 잔고를 실시간 업데이트하여 데이터 정밀도를 유지합니다.
+
+  ### 결과
+  ![alt text](image.png)
+  ```
+  | ID | Ticker | Side | Price | Volume | Timestamp |
+  | :--- | :--- | :--- | :--- | :--- | :--- |
+  | 1 | KRW-BTC | BUY | 106,517,000 | 0.001 | 2026-04-08 01:15 |
+  | 2 | KRW-BTC | SELL | 106,295,000 | 0.001 | 2026-04-08 01:27 |
+  | 3 | KRW-BTC | BUY | 106,254,000 | 0.001 | 2026-04-08 01:27 |
+  | 4 | KRW-BTC | SELL | 106,201,000 | 0.001 | 2026-04-08 01:28 |
+  ```
+2. 주요 기능 (Key Features)
+실시간 데이터 연동: Python으로 수집된 업비트 시세를 MySQL을 통해 실시간으로 읽어옴.
+
+- 이동평균선(MA5) 전략: 최근 5회차 가격 평균을 계산하여 현재가와 비교하는 추세 추종 매매.
+
+- 자동 자산 관리: 매수/매도 시 assets 테이블의 원화(CASH)와 비트코인(BTC) 잔고를 실시간 업데이트.
+
+- 매매 일지 자동 기록: 모든 거래 내역(가격, 시간, 종류)을 trade_logs 테이블에 자동 저장.
+
+- 리스크 관리 로직:
+  - 익절(Take-Profit): 설정 수익률(예: +0.01%) 도달 시 자동 매도.
+
+  - 손절(Stop-Loss): 설정 수익률(예: -0.01%) 도달 시 자동 매도.
+
+  - 중복 매수 방지: 코인 보유 중일 경우 추가 매수 금지 로직 포함.
+
+3. 모듈화 현황 (Refactoring)
+- DatabaseManager 클래스 구현:
+
+  - 기존 main.cpp에 밀집되어 있던 SQL 쿼리와 DB 접속 로직을 분리.
+  - DatabaseManager.h / .cpp 파일을 통해 DB 접근을 객체화하여 유지보수성 향상.
+- Main Logic 간소화: main.cpp는 매매 전략과 루프 제어에만 집중하도록 설계.
+
+[안정성 강화(예외 처리)]
+```
+1. C++ 코드 리팩토링 (기초 공사)
+작업 내용: main.cpp에 몰려있던 코드를 get_total_asset, update_balance 등 기능별 함수로 분리.
+
+분류: 2️⃣ 시스템 안정성 및 최적화 (Stability)
+
+효과: * 가독성 향상: 코드가 깔끔해져서 어디가 틀렸는지 찾기 쉬워짐.
+
+재사용성: 나중에 다른 기능을 추가할 때 만들어둔 함수를 그대로 쓸 수 있음.
+
+안정성: 한 부분의 수정이 전체 시스템을 망가뜨릴 위험을 줄임.
+
+2. 환경 설정의 외부화 (공용 설계도)
+작업 내용: DB 접속 정보 등을 코드에 직접 쓰지 않고 config.json 파일로 분리.
+
+분류: 3️⃣ 시각화 및 관리 (Visualization & Config)
+
+효과: * 보안: 소스 코드를 공유해도 내 비번은 공개되지 않음.
+
+협업: C++ 엔진과 Python 모니터가 똑같은 정보를 공유해서 사용하게 함.
+
+3. 실시간 모니터링 시스템 구축 (결과물)
+작업 내용: Python의 matplotlib을 이용해 자산 변화 그래프 구현.
+
+분류: 3️⃣ 시각화 및 관리 (Visualization & Config)
+
+효과: * 시각화: 숫자로만 보던 자산을 한눈에 들어오는 그래프로 확인 가능.
+
+실시간 감시: 엔진이 잘 돌아가는지 매번 DB를 뒤져보지 않아도 됨.
+
+````
+
+  
+
+
+1️⃣ 전략 고도화 (Intelligence)
+[v] 기술적 지표 도입: 이동평균선(MA5, MA20) 추세 추종 구현 완료.
+
+[v] 자동 손절/익절: 수익률 기반 자동 매도 로직 구현 완료.
+
+[v] 변동성 돌파 전략: 래리 윌리엄스 전략 이식 완료.
+
+2️⃣ 시스템 안정성 및 최적화 (Stability)
+[v] 코드 리팩토링: main.cpp 함수 분리 및 구조화 완료. (유지보수성 향상)
+
+[ ] 예외 처리: API/DB 재접속 로직 강화 (다음 목표)
+
+3️⃣ 시각화 및 관리 (Visualization & Config)
+[v] 실시간 대시보드: Python 기반 실시간 자산 그래프 구현 완료.
+
+[v] 환경 설정 파일화: config.json을 통한 C++ & Python 설정 공유 완료.
+```
+pip install pandas matplotlib mysql-connector-python
+```
 ---
 
 ## 🛠️ 기술 스택
@@ -130,6 +249,5 @@ pip install pymysql python-dotenv
 - **Environment**: Windows 11, Visual Studio 2022
 - **Library**: `libmysql`, `requests` (Python)
 ---------------------------------------------
-비트코인 자동 매매 엔진 (IoT-AutoTrading-System)C++ & MySQL 기반의 기술적 지표(MA5) 추세 추종 매매 시스템 > 본 프로젝트는 실시간 시장 데이터를 분석하여 이동평균선 돌파 시 매수하고, 설정된 수익률에 따라 자동 익절 및 손절을 수행하는 트레이딩 엔진입니다.📌 핵심 기능 (Core Features)MA5(5일 이동평균선) 전략: 최근 5개 캔들의 평균 가격을 계산하여 현재가가 이를 돌파할 시 상승 추세로 판단 및 매수(BUY).실시간 수익률(ROI) 모니터링: 매수 평균 단가(Avg Price)를 실시간으로 추적하여 현재가 대비 수익률을 % 단위로 산출.자동 매도 시스템 (Exit Strategy):익절(Take-Profit): 수익률 +2.0% 달성 시 자동 매도.손절(Stop-Loss): 수익률 -1.0% 도달 시 손실 최소화를 위한 자동 매도.자산 동기화 (Asset Management): MySQL과 연동하여 현금(CASH) 및 코인(BTC) 잔고를 실시간으로 업데이트 및 영구 저장.🏗️ 시스템 아키텍처데이터 수집: Python(Upbit API)을 사용하여 실시간 시세를 MySQL market_data 테이블에 적재.전략 실행: C++ 엔진이 5초 주기로 DB를 조회하여 MA5 지표 계산 및 매매 의사결정.기록 및 반영: 매매 내역은 trade_logs에 기록되고, 최종 자산 상태는 assets 테이블에 즉시 반영.🛠️ 기술 스택 (Tech Stack)Language: C++11, Python 3.10Database: MySQL 8.0API/Library: libmysql (MySQL C API), Windows.h (System Control)IDE: Visual Studio 2022📊 매매 로직 (Trading Logic)진입(Entry): $CurrentPrice > MA5$ (상승 돌파 시 매수)수익률(ROI): $\frac{CurrentPrice - AvgPrice}{AvgPrice} \times 100$청산(Exit): $ROI \ge 2.0\%$ 또는 $ROI \le -1.0\%$🔍 Troubleshooting & Lessons Learned1. C++ 컴파일러의 순차적 독해 특성문제: 함수 정의 순서가 꼬여 recordTrade 등 하위 함수를 상단에서 호출할 때 "식별자를 찾을 수 없음" 에러 발생.해결: 기초 함수를 상단에, 이를 조합하는 고수준 함수(checkMarketAndDecide)를 하단에 배치하여 코드 의존성 문제 해결.2. 수치 데이터 표현 및 정밀도 문제문제: 비트코인 가격(억 단위) 처리 시 SQL 쿼리에 지수 형태(e+)로 전달되어 문법 오류 발생.해결: std::fixed와 std::setprecision을 사용하여 숫자를 정확한 정수/실수 문자열로 변환하여 쿼리 안정성 확보.3. 자산 관리의 필요성 (Risk Management)문제: 잔고 확인 로직 부재로 인해 보유 현금보다 많은 수량을 매수하여 CASH 잔고가 음수(-)로 기록되는 버그 발견.교훈: 실제 매매 시 '보유 잔고 내 매수' 조건이 전략만큼 중요하다는 것을 학습. (향후 잔고 체크 로직 추가 예정)🗺️ 향후 로드맵 (Roadmap)[ ] 중복 매수 방지: 이미 코인을 보유한 경우 추가 진입을 제한하여 리스크 관리.[ ] 코드 모듈화: main.cpp의 기능을 헤더(.h)와 소스(.cpp) 파일로 분리하여 유지보수성 향상.[ ] 고도화 지표: MA20(20일선)을 추가하여 골든크로스/데드크로스 전략 구현.
 
 

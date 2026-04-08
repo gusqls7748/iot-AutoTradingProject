@@ -1,0 +1,11 @@
+{
+    "database": {
+        "host": "127.0.0.1",
+        "user": "root",
+        "pw": "my123456",
+        "db": "AutoTrading"
+    },
+    "trading": {
+        "buy_volume": 0.001
+    }
+}
