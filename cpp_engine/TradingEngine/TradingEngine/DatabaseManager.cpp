@@ -1,4 +1,5 @@
 #include "DatabaseManager.h"
+#include <algorithm>	// reverse 함수 사용을 위해 필요
 
 DatabaseManager::DatabaseManager() 
 	: conn(nullptr), host(""), user(""), pw(""), db_name(""), buy_volume(0.0) //  이렇게 초기화 목록을 추가!
@@ -149,4 +150,31 @@ void DatabaseManager::updateAssets(double price, double volume) {
 	mysql_query(conn, ss1.str().c_str());
 	mysql_query(conn, ss2.str().c_str());
 	std::cout << " [자산 반영 완료] ";
+}
+
+std::vector<double> DatabaseManager::getRecentPrices(int limit) {
+	std::vector<double> prices;
+
+	// [수정] string -> std::string, to_string -> std::to_string
+	std::string query = "SELECT price FROM market_data ORDER BY id DESC LIMIT " + std::to_string(limit);
+
+	if (mysql_query(conn, query.c_str()) == 0) {
+		MYSQL_RES* res = mysql_store_result(conn);
+		if (res) {
+			MYSQL_ROW row;
+			while ((row = mysql_fetch_row(res))) {
+				if (row[0]) prices.push_back(std::atof(row[0]));
+			}
+			mysql_free_result(res);
+		}
+	}
+	else {
+		// [수정] cout -> std::cout, endl -> std::endl
+		std::cout << " 가격 리스트 조회 실패: " << mysql_error(conn) << std::endl;
+	}
+
+	// [중요] reverse 함수는 <algorithm>이 필요합니다. 상단에 #include <algorithm> 확인!
+	std::reverse(prices.begin(), prices.end());
+
+	return prices;
 }

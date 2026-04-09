@@ -21,6 +21,7 @@ private:
 	std::string user;
 	std::string pw;
 	std::string db_name;
+	
 	double buy_volume;
 
 public:
@@ -41,6 +42,7 @@ public:
 	double getMA5();
 	double getCurrentPrice();
 	double getLastBuyPrice();
+	std::vector<double> getRecentPrices(int limit);
 
 };
 
