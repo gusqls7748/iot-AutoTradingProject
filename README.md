@@ -66,6 +66,47 @@ C++에서는 속도가 중요한 기술적 지표 계산을 담당합니다.
 
     - 흐름: Python에서 API로 가격을 가져옴 → C++ 함수 호출(가격 전달) → C++이 계산 후 "Buy/Sell/Hold" 결과 반환 → Python이 결과에 따라 DB 업데이트.
 
+### 데이터베이스 스키마 (ERD) 구조
+1. 관계도 요약 (ERD Concept)
+우리 시스템의 데이터는 다음과 같은 흐름을 가집니다.
+
+market_data: 실시간 시세를 저장 (수집기의 결과물)
+
+trade_logs: 매매 결정을 기록 (엔진의 행동 기록)
+
+assets: 현재 내 주머니 사정 (최종 결과물)
+
+2. 테이블 상세 설계 (Table Specifications)
+레포트에는 아래 표 형식을 그대로 넣으시면 전문성이 확 올라갑니다.
+
+1. market_data (시세 정보)
+
+| 컬럼명 | 데이터 타입 | 제약 조건 | 설명 |
+| :--- | :--- | :--- | :--- |
+| id | INT | PK, AI | 고유 식별 번호 |
+| ticker | VARCHAR(20) | NOT NULL | 종목 코드 (KRW-BTC) |
+| price | DECIMAL(18,4) | NOT NULL | 수집된 현재가 |
+| timestamp | DATETIME | DEFAULT | 데이터 수집 시간 |
+
+2. trade_logs (매매 일지)
+
+| 컬럼명 | 데이터 타입 | 제약 조건 | 설명 |
+| :--- | :--- | :--- | :--- |
+| id | INT | PK, AI | 거래 고유 ID |
+| side | VARCHAR(10) | NOT NULL | 매수(BUY) / 매도(SELL) |
+| price | DECIMAL(18,4) | NOT NULL | 체결 가격 |
+| volume | DECIMAL(18,8) | NOT NULL | 체결 수량 |
+| timestamp | DATETIME | DEFAULT | 거래 발생 시간 |
+
+3. assets (자산 현황)
+
+| 컬럼명 | 데이터 타입 | 제약 조건 | 설명 |
+| :--- | :--- | :--- | :--- |
+| asset_type | VARCHAR(20) | Primary Key | 자산 종류 (CASH, BTC) |
+| balance | DECIMAL(18,8) | NOT NULL | 현재 보유 잔고 |
+| avg_price | DECIMAL(18,4) | DEFAULT 0 | 매수 평단가 |
+| last_update | DATETIME | ON UPDATE | 최종 갱신 시각 |
+
 
 ### 2026-04-03 1일차
 
