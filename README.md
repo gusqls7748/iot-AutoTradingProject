@@ -1,6 +1,10 @@
 ## iot-AutoTradingProject
 2026년 Iot개발 miniProject 1
 
+- 최종결과
+
+![alt text](image-2.png)
+
 ### 알고리즘 기반 '주식/가상화폐 자동 매매 시뮬레이션
 
 1. 시스템 구조 (Architecture)
@@ -29,7 +33,9 @@
 - DatabaseManager 클래스 구현:
 
   - 기존 main.cpp에 밀집되어 있던 SQL 쿼리와 DB 접속 로직을 분리.
+ 
   - DatabaseManager.h / .cpp 파일을 통해 DB 접근을 객체화하여 유지보수성 향상.
+
 - Main Logic 간소화: main.cpp는 매매 전략과 루프 제어에만 집중하도록 설계.
 2. 시스템 아키텍처 (전체 구조)
 시스템은 크게 세 부분으로 나누어 설계하면 효율적입니다.
@@ -79,7 +85,7 @@ assets: 현재 내 주머니 사정 (최종 결과물)
 2. 테이블 상세 설계 (Table Specifications)
 레포트에는 아래 표 형식을 그대로 넣으시면 전문성이 확 올라갑니다.
 
-1. market_data (시세 정보)
+1. `market_data (시세 정보)`
 
 | 컬럼명 | 데이터 타입 | 제약 조건 | 설명 |
 | :--- | :--- | :--- | :--- |
@@ -88,7 +94,7 @@ assets: 현재 내 주머니 사정 (최종 결과물)
 | price | DECIMAL(18,4) | NOT NULL | 수집된 현재가 |
 | timestamp | DATETIME | DEFAULT | 데이터 수집 시간 |
 
-2. trade_logs (매매 일지)
+2. `trade_logs (매매 일지)`
 
 | 컬럼명 | 데이터 타입 | 제약 조건 | 설명 |
 | :--- | :--- | :--- | :--- |
@@ -98,7 +104,7 @@ assets: 현재 내 주머니 사정 (최종 결과물)
 | volume | DECIMAL(18,8) | NOT NULL | 체결 수량 |
 | timestamp | DATETIME | DEFAULT | 거래 발생 시간 |
 
-3. assets (자산 현황)
+3. `assets (자산 현황)`
 
 | 컬럼명 | 데이터 타입 | 제약 조건 | 설명 |
 | :--- | :--- | :--- | :--- |
@@ -345,12 +351,13 @@ database/: MySQL 기반 마켓 데이터 및 자산 관리
 
 ## 5일차
 
-1. 시각화 고도화
+1. `시각화 고도화`
 - 수익률(%) 자동계산, Y지수 표기법 제거, 실시간 차트 업데이트
   - 수익률(ROI) 실시간 계산: 초기 자본 대비 자산 변동을 %로 자동 계산하여 상단 타이틀에 노출합니다.
   - 가독성 개선: 축 눈금의 지수 표기법(Scientific Notation)을 제거하고, 실제 원화(KRW) 단위로 표기하여 직관성을 높였습니다.
   - Dynamic Update: matplotlib.animation을 활용하여 5초 간격으로 차트를 갱신, 실시간 시장 상황을 반영합니다.
-2. 매매 타점 마킹 (Trade Point Marking)
+
+2. `매매 타점 마킹` (Trade Point Marking)
 - DB 연동 시각화: trade_logs 테이블의 데이터를 조회하여 실제 매수가와 매도가 발생한 시점을 차트 위에 표시합니다.
 
 직관적인 인터페이스:
@@ -361,15 +368,15 @@ database/: MySQL 기반 마켓 데이터 및 자산 관리
 
 - 이를 통해 전략(MA5 골든크로스 등)이 의도한 타점에서 정확히 실행되었는지 사후 검증이 가능합니다.
 
-3. 시스템 생존력 및 안정성 (Reliability)
+3. `시스템 생존력 및 안정성` (Reliability)
 - Fault Tolerance: 데이터베이스 연결 유실 시 시스템이 멈추지 않도록 자동 재접속(Retry) 로직을 구현했습니다.
 
 - Exception Handling: try-except 블록을 통해 네트워크 불안정이나 DB 타임아웃 상황에서도 프로세스가 강제 종료되지 않고 생존하도록 설계했습니다.
 
-4. 로그 및 스냅샷 자동화 (Logging Automation)
+4. `로그 및 스냅샷 자동화` (Logging Automation)
 - 이벤트 트리거 저장: 새로운 매매가 감지될 때마다 현재 차트의 상태를 .png 파일로 자동 스냅샷 저장합니다.
 
-- CSV 데이터 아카이빙: 모든 매매 이력은 파일 형태(trade_history.csv)로 누적 기록되어, 추후 데이터 분석 및 전략 수정의 기초 자료로 활용됩니다.
+- `CSV 데이터 아카이빙`: 모든 매매 이력은 파일 형태(trade_history.csv)로 누적 기록되어, 추후 데이터 분석 및 전략 수정의 기초 자료로 활용됩니다.
 
 5. C++ 전략 고도화: RSI 필터 만들기
   - 완료된 고도화 항목 체크리스트

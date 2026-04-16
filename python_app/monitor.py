@@ -1,5 +1,6 @@
 import mysql.connector
 import json
+import csv
 import os
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -9,8 +10,17 @@ import time
 # 1. 설정 및 폰트 로드
 current_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(current_dir, "config.json")
+# 폰트 설정 부분 근처에 추가
+plt.rcParams['axes.unicode_minus'] = False
 
-font_path = "C:/Windows/Fonts/malgun.ttf"
+# 프로그램 시작 시 파일이 없으면 제목 줄 생성
+if not os.path.exists('trade_history.csv'):
+    with open('trade_history.csv', 'w', newline='', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerow(['timestamp', 'type', 'price', 'total_asset'])
+
+# 경로 앞에 r을 붙여주면 훨씬 안전합니다.
+font_path = r"C:\Windows\Fonts\NanumGothicCoding.ttf"
 font_name = font_manager.FontProperties(fname=font_path).get_name()
 rc('font', family=font_name)
 
@@ -59,7 +69,7 @@ def get_trade_logs():
         if conn and conn.is_connected(): conn.close()
 
 # 3. 초기화 (시스템 시작 시 딱 한 번)
-BASE_PRINCIPAL = 100000000.0 # 기본 1억 JPY
+BASE_PRINCIPAL = 100000000.0 # 기본 1억 
 sim_cash = BASE_PRINCIPAL
 sim_btc_amount = 0.0
 is_holding = False
@@ -90,6 +100,10 @@ def update(frame):
                     sim_cash = 0
                     is_holding = True
                     print(f"🚀 [BUY] {current_price:,.0f}원에 매수")
+                    # --- [CSV 저장 추가] ---
+                    with open('trade_history.csv', 'a', newline='', encoding='utf-8-sig') as f:
+                        writer = csv.writer(f)
+                        writer.writerow([current_time, 'BUY', current_price, sim_cash])
                 elif latest_side == 'SELL' and is_holding:
                     sell_val = sim_btc_amount * current_price
                     fee = sell_val * 0.0005
@@ -97,7 +111,12 @@ def update(frame):
                     sim_btc_amount = 0
                     is_holding = False
                     print(f"💰 [SELL] {current_price:,.0f}원에 매도")
+                    # --- [CSV 저장 추가] ---
+                    with open('trade_history.csv', 'a', newline='', encoding='utf-8-sig') as f:
+                        writer = csv.writer(f)
+                        writer.writerow([current_time, 'SELL', current_price, sim_cash])
                 last_processed_trade_id = trade_id
+                
 
         # 실시간 가치 계산
         current_val = (sim_btc_amount * current_price) if is_holding else sim_cash
@@ -125,7 +144,7 @@ def update(frame):
         plt.xticks(rotation=45, ha='right')
         ax.set_ylabel('수익률 (%)')
         status = "BTC 보유" if is_holding else "현금 보유"
-        plt.title(f"시뮬레이션 [{status}] | 자산: {current_val:,.0f} JPY ({curr_yield:+.4f}%)")
+        plt.title(f"시뮬레이션 [{status}] | 자산: {current_val:,.0f} 원 ({curr_yield:+.4f}%)")
         plt.tight_layout()
 
 # 5. 실행
