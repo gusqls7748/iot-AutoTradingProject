@@ -9,7 +9,7 @@
 #include <fstream>	// JSON 라이브러리 포함
 #include "json.hpp"
 
-// 2. 별명 만들기 (여기에 두는 게 가장 좋습니다)
+// 2. 별명 만들기 
 using json = nlohmann::json;	// 별명 만들기
 
 class DatabaseManager {
