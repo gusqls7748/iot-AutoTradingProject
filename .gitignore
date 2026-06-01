@@ -210,3 +210,7 @@ __marimo__/
 
 .vs/
 *.ipch
+
+# .gitignore 파일 내용
+*.xlsx
+MSDA-Trader/*.xlsx
