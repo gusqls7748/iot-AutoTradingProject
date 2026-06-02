@@ -132,6 +132,17 @@ def get_market_net_purchases(date_str, market_code):
 
     return result_dict if result_dict else None
 
+# msda.py 내부 어딘가에 추가할 예시 함수
+def get_live_top_tickers():
+    """
+    네이버나 거래소에서 실시간 외인/기관 순매수 상위 종목을 정규식으로 긁어온 뒤,
+    ['000660.KS', '005930.KS'] 같은 야후 파이낸스 서식 리스트로 반환합니다.
+    """
+    # ... 기존 정규식 긁어오는 로직 ...
+    # 만약 정규식으로 '000660'을 추출했다면 뒤에 '.KS'를 붙여서 리스트에 append
+    live_tickers = ["000660.KS", "005930.KS", "035420.KS", "066570.KS"] # 예시 결과물
+    return live_tickers
+
 
 def main():
     now = datetime.now()
