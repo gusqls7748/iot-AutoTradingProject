@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import yfinance as yf
+import math  # 👈 math.isnan을 쓰기 위해 상단에 import 필수!
 
 def get_theme_leader_board():
     print("[Macro Engine] 미 증시 주도 테마 및 핵심 주종목 추적 시작...")
@@ -57,37 +58,65 @@ def get_market_weather():
     print("\n🏛️ [LAYER 1] 글로벌 및 국장 매크로 환경 실시간 점검...")
     
     try:
-        # 야후 파이낸스에서 한국 코스피 지수(^KS11)와 VKOSPI 공포지수(^VKSPI) 실시간 수집
-       # ➔ 💡 변경 코드 (에러가 자주 나는 한국 VKOSPI 대신 글로벌 공포지수 대장인 미국 VIX로 대체)
+        # 야후 파이낸스에서 한국 코스피 지수(^KS11)와 미국 VIX(^VIX) 실시간 수집
         macro_data = yf.download(["^KS11", "^VIX"], period="2d", progress=False)
 
-        # 1. VIX 수치 파싱
+        # -----------------------------------------------------------------
+        # [1] VIX 수치 파싱 및 nan 방어 코드 적용 구간
+        # -----------------------------------------------------------------
         if '^VIX' in macro_data['Close'].columns:
-            vkospi = float(macro_data['Close']['^VIX'].iloc[-1])
+            raw_vix = macro_data['Close']['^VIX'].iloc[-1]
+            # yfinance 특성상 데이터가 비어있으면 nan이 들어올 수 있음
+            if raw_vix is None or math.isnan(raw_vix):
+                vkospi = 18.5  # nan일 경우 안전한 기본값으로 세팅
+            else:
+                vkospi = float(raw_vix)
         else:
             vkospi = 18.5
             
-        # 2. 시장 방향성 파싱 (코스피 전일 대비 등락폭 계산)
+        # -----------------------------------------------------------------
+        # [2] 코스피 지수 파싱 및 nan 방어 코드 적용 구간
+        # -----------------------------------------------------------------
         if '^KS11' in macro_data['Close'].columns:
             kospi_today = macro_data['Close']['^KS11'].iloc[-1]
             kospi_prev = macro_data['Close']['^KS11'].iloc[-2]
-            kospi_chg = ((kospi_today - kospi_prev) / kospi_prev) * 100
+            
+            # 둘 중 하나라도 nan이거나 분모가 0이 되는 상황 방어
+            if (kospi_today is None or math.isnan(kospi_today) or 
+                kospi_prev is None or math.isnan(kospi_prev) or kospi_prev == 0):
+                kospi_chg = 0.0
+                kospi_print_str = "조회 실패(확인 필요)"  # 터미널 출력용 문자열
+            else:
+                kospi_chg = ((kospi_today - kospi_prev) / kospi_prev) * 100
+                kospi_print_str = f"{kospi_chg:+.2f}%"
         else:
             kospi_chg = 0.0
+            kospi_print_str = "0.00%"
 
-        # 3. 미 증시 빅테크(필라델피아 반도체/나스닥) 간이 필터링
-        # 여기서는 편의상 나스닥 대장주인 애플/엔비디아가 살아있는지로 매칭
+        # -----------------------------------------------------------------
+        # [3] 미 증시 빅테크 엔비디아 파싱 및 nan 방어 코드 적용 구간
+        # -----------------------------------------------------------------
         us_data = yf.download(["AAPL", "NVDA"], period="2d", progress=False)
-        nvda_chg = ((us_data['Close']['NVDA'].iloc[-1] - us_data['Close']['NVDA'].iloc[-2]) / us_data['Close']['NVDA'].iloc[-2]) * 100
+        nvda_today = us_data['Close']['NVDA'].iloc[-1]
+        nvda_prev = us_data['Close']['NVDA'].iloc[-2]
+        
+        if (nvda_today is None or math.isnan(nvda_today) or 
+            nvda_prev is None or math.isnan(nvda_prev) or nvda_prev == 0):
+            nvda_chg = 0.0
+            nvda_print_str = "조회 실패(미장 휴장 등)"
+        else:
+            nvda_chg = ((nvda_today - nvda_prev) / nvda_prev) * 100
+            nvda_print_str = f"{nvda_chg:+.2f}%"
+            
         us_market_good = True if nvda_chg > -1.0 else False
 
+        # 변수 값이 nan이 아님이 보장되었으므로 깔끔하게 포맷팅하여 출력
         print(f" - [국장 변동성] VKOSPI 공포 지수 : {vkospi:.2f}")
-        print(f" - [국장 지수방향] KOSPI 당일 등락  : {kospi_chg:+.2f}%")
-        print(f" - [미장 반도체] 엔비디아 단기 동향  : {nvda_chg:+.2f}%")
+        print(f" - [국장 지수방향] KOSPI 당일 등락  : {kospi_print_str}")
+        print(f" - [미장 반도체] 엔비디아 단기 동향  : {nvda_print_str}")
         print("-" * 55)
 
         # 🚨 [매크로 폭풍우 조건 필터링]
-        # 선거철 정치 이슈나 외인 매도 폭탄으로 VKOSPI가 22를 넘거나, 지수가 -1.5% 이상 폭락 중일 때
         if vkospi > 22.0 or kospi_chg < -1.5:
             return "STORM", "⚠️ 매크로 폭풍우 발생: 국장 내 변동성 폭등 및 외인 이탈 감지. 자금 보호를 위해 매수 전면 동결."
             
@@ -97,10 +126,13 @@ def get_market_weather():
         return "CLOUDY", "☁️ 흐림: 시장이 다소 불안정합니다. 철저히 눌림목 보수적 타점만 노리세요."
 
     except Exception as e:
-        # 데이터 수집 오류 시 안전하게 보수적으로 흐림 판정
         return "CLOUDY", f"⚠️ 매크로 일부 데이터 누락으로 흐림 판정: {e}"
-
+    
+    # ⚠️ 이 블록이 맨 밑에 반드시 있어야 코드가 실행됩니다!
+    
+    # ⚠️ 이 블록이 맨 밑에 반드시 있어야 코드가 실행됩니다!
 if __name__ == "__main__":
     get_theme_leader_board()
     weather, msg = get_market_weather()
     print(f"결과: {weather} ➔ {msg}")
+
